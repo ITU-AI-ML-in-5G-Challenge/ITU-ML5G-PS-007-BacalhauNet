@@ -1,0 +1,50 @@
+### INFO ###
+The format for the submission must be a zipfile including:
+ - This filled out form
+ - Full source code for end-to-end reproducibility
+ - Dockerfile-based environment setup
+   (we suggest to base your submission on this sandbox repository)
+ - Exported .onnx model with batch size = 1
+ - Trained .pth checkpoint
+
+### FILL IN ###
+# Overall test accuracy reached:
+-> 0.562410
+
+# Inference cost score reached:
+-> 0.016211
+
+# Complete output dictionary printed by the inference_cost() function:
+-> Inference cost for models/model_export.onnx
+{
+  "discount_sparsity": true,
+  "mem_o_FLOAT32": 93208.0,
+  "mem_w_SCALEDINT6": 1784.0,
+  "op_mac_FLOAT32_SCALEDINT6": 46976.0,
+  "op_mac_SCALEDINT8_SCALEDINT6": 18973.0,
+  "op_mac_SCALEDUINT6_SCALEDINT6": 258688.0,
+  "total_bops": 19242864.0,
+  "total_mem_o_bits": 2982656.0,
+  "total_mem_w_bits": 10704.0,
+  "unsupported": "set()"
+}
+
+# Path to .onnx model within this zipfile:
+-> bacalhaunet_gold_export.onnx
+
+# Path to .pth checkpoint within this zipfile:
+-> bacalhaunet_gold_weights.pth
+
+# Link to GitHub repository containing your code 
+# (to be made public after submission deadline):
+-> https://github.com/danielgranhao/ITU-ML5G-PS-007_BacalhauNet_Submission
+
+# Instructions for reproduction:
+1) Check if all python depencies are installed (odfpy package is needed)
+2) Dataset must be loaded on /workspace/dataset
+3) Execute script.sh (inside source folder)
+4) Final weights are saved on models/finalweights.pth
+5) evaluation.ipynb may be used to confirm accuracy and inference cost score
+
+# Further comments:
+-> In our experience the 56% accuracy requirement may not be met depending on the initial weight initialization. Several executions of the described reproduction procedure may be required.
