@@ -238,30 +238,6 @@ for line in range(len(file)):
         print(f"Unable to unpack min_weight_value at line {line}.")
         exit()
 
-    if isinstance(file.loc[line, "weight_decay_tune2"], float):
-        weight_decay_tune2 = file.loc[line, "weight_decay_tune2"]
-    else:
-        print(f"Unable to unpack weight_decay_tune2 at line {line}.")
-        exit()
-
-    if isinstance(file.loc[line, "min_weight_value2"], float):
-        min_weight_value2 = file.loc[line, "min_weight_value2"]
-    else:
-        print(f"Unable to unpack min_weight_value2 at line {line}.")
-        exit()
-
-    if isinstance(file.loc[line, "weight_decay_tune3"], float):
-        weight_decay_tune3 = file.loc[line, "weight_decay_tune3"]
-    else:
-        print(f"Unable to unpack weight_decay_tune3 at line {line}.")
-        exit()
-
-    if isinstance(file.loc[line, "min_weight_value3"], float):
-        min_weight_value3 = file.loc[line, "min_weight_value3"]
-    else:
-        print(f"Unable to unpack min_weight_value3 at line {line}.")
-        exit()
-
     if not (len(kernels) == len(strides) == len(out_channels) == len(layers_w_bits) == len(layers_a_bits)):
         print(f"Length of parameters on line {line} not equal. Ignoring and resuming...")
         continue
@@ -289,7 +265,7 @@ for line in range(len(file)):
         )
     )
 
-    export_base_name = f"bacalhaunetv1_tuned2" \
+    export_base_name = f"bacalhaunetv1_tuned" \
                        f"K{str(kernels).replace(' ', '')}" \
                        f"S{str(strides).replace(' ', '')}" \
                        f"O{str(out_channels).replace(' ', '')}" \
@@ -302,14 +278,10 @@ for line in range(len(file)):
                        f"WD[{str(weight_decay)}]" \
                        f"WDT[{str(weight_decay_tune)}]" \
                        f"minW[{str(min_weight_value)}]" \
-                       f"WDT2[{str(weight_decay_tune2)}]" \
-                       f"minW2[{str(min_weight_value2)}]" \
-                       f"WDT3[{str(weight_decay_tune3)}]" \
-                       f"minW3[{str(min_weight_value3)}]" \
                        f"_SNR[{min_snr},30]" 
 
 
-    import_base_name = f"bacalhaunetv1_tuned2" \
+    import_base_name = f"bacalhaunetv1_quant" \
                        f"K{str(kernels).replace(' ', '')}" \
                        f"S{str(strides).replace(' ', '')}" \
                        f"O{str(out_channels).replace(' ', '')}" \
@@ -320,15 +292,12 @@ for line in range(len(file)):
                        f"D[0.0]" \
                        f"F[{int(file.loc[line, 'fullyconnected_bit_width'])}]" \
                        f"WD[{str(weight_decay)}]" \
-                       f"WDT[{str(weight_decay_tune)}]" \
-                       f"minW[{str(min_weight_value)}]" \
-                       f"WDT2[{str(weight_decay_tune2)}]" \
-                       f"minW2[{str(min_weight_value2)}]" \
                        f"_SNR[{min_snr},30]" 
 
 
     # Load trained model
     savefile = os.path.join(import_path, import_base_name + "_finalweights.pth")
+    # savefile = os.path.join(import_path, "bacalhaunet_gold_initialweights.pth")
     saved_state = torch.load(savefile, map_location=torch.device("cpu"))
     bacalhaunetv1.load_state_dict(saved_state)
     if gpu is not None:
@@ -336,13 +305,13 @@ for line in range(len(file)):
 
 
     # Prune model
-    print("Pruning weights with abs under " + str(min_weight_value3))
+    print("Pruning weights with abs under " + str(min_weight_value))
     print("")
     for m in bacalhaunetv1.modules():
         if isinstance(m, qnn.QuantConv1d):
             w = m.weight.data.clone().cpu().numpy().flatten().tolist()
             w = np.abs(w)
-            count = sum(map(lambda x : x < min_weight_value3, w))
+            count = sum(map(lambda x : x < min_weight_value, w))
             perc = count / len(w)
             print("*** CONV LAYER ***")
             print("Number of params: " + str(len(w)) + " - Fraction under minimum: " + str(perc))
@@ -352,7 +321,7 @@ for line in range(len(file)):
         if isinstance(m, qnn.QuantLinear):
             w = m.weight.data.clone().cpu().numpy().flatten().tolist()
             w = np.abs(w)
-            count = sum(map(lambda x : x < min_weight_value3, w))
+            count = sum(map(lambda x : x < min_weight_value, w))
             perc = count / len(w)
             print("*** LINEAR LAYER ***")
             print("Number of params: " + str(len(w)) + " - Fraction under minimum: " + str(perc))
@@ -364,7 +333,7 @@ for line in range(len(file)):
     dataset = RadioML18Dataset(dataset_path=dataset_path, min_snr=min_snr)
     data_loader_test = DataLoader(dataset, batch_size=batch_size, sampler=dataset.test_sampler)
     test_acc = test(bacalhaunetv1, data_loader_test)
-    file.loc[line, "test_accuracy_after_prune3"] = test_acc
+    file.loc[line, "test_accuracy_after_prune"] = test_acc
 
     if evaluate_acc:
         with open(os.path.join(export_path, export_base_name + "_model.txt"), "w") as _file2write:
@@ -388,7 +357,7 @@ for line in range(len(file)):
         criterion = nn.CrossEntropyLoss()
         if gpu is not None:
             criterion = criterion.cuda()
-        optimizer = torch.optim.Adam(bacalhaunetv1.parameters(), lr=0.01, weight_decay=weight_decay_tune3)
+        optimizer = torch.optim.Adam(bacalhaunetv1.parameters(), lr=0.01, weight_decay=weight_decay_tune)
         lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=5, T_mult=1)
 
         running_loss = []
@@ -401,8 +370,10 @@ for line in range(len(file)):
             test_acc = test(bacalhaunetv1, data_loader_test)
             if test_acc > max_acc:
                 max_acc = test_acc
+                max_acc_save_path = os.path.join(export_path, export_base_name + "_Acc" + str(max_acc) + ".pth")
                 print(f"Highter accuracy found, saving model weights at {max_acc_save_path}")
-                save_model(bacalhaunetv1, os.path.join(export_path, "finalweights.pth"))
+                save_model(bacalhaunetv1, max_acc_save_path)
+
             print("Epoch %d: Training loss = %f, test accuracy = %f" % (epoch, np.mean(loss_epoch), test_acc))
             running_loss.append(loss_epoch)
             running_test_acc.append(test_acc)
@@ -412,8 +383,10 @@ for line in range(len(file)):
         diff = done - start
         print(f"Trainning time: {str(datetime.timedelta(seconds=diff))} (h:m:s)")
 
-        file.loc[line, "test_accuracy_final3"] = max_acc
+        file.loc[line, "test_accuracy_final"] = max_acc
         file.loc[line, "notes"] = os.path.join(export_path, export_base_name + "_Acc" + str(max_acc) + ".pth")
+
+        save_model(bacalhaunetv1, os.path.join(export_path, export_base_name + "_finalweights.pth"))
 
     # Computes the inference cost
     export_onnx_path = os.path.join(export_path, export_base_name + "_export.onnx")
@@ -430,9 +403,9 @@ for line in range(len(file)):
     bops = int(inference_cost_dict["total_bops"])
     w_bits = int(inference_cost_dict["total_mem_w_bits"])
 
-    file.loc[line, "inference_cost_final3"] = 0.5 * (bops / bops_baseline) + 0.5 * (w_bits / w_bits_baseline)
-    file.loc[line, "inference_cost_bops_final3"] = bops / bops_baseline
-    file.loc[line, "inference_cost_wbits_final3"] = w_bits / w_bits_baseline
+    file.loc[line, "inference_cost_final"] = 0.5 * (bops / bops_baseline) + 0.5 * (w_bits / w_bits_baseline)
+    file.loc[line, "inference_cost_bops_final"] = bops / bops_baseline
+    file.loc[line, "inference_cost_wbits_final"] = w_bits / w_bits_baseline
 
 # Set file name and save as an excel ods format
 save_file_name = os.path.splitext(excel_path)[0] + "_computed" + os.path.splitext(excel_path)[1]

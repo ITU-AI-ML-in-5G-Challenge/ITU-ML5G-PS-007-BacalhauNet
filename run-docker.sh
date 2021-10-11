@@ -54,7 +54,7 @@ SCRIPTPATH=$(dirname "$SCRIPT")
 : ${NETRON_PORT=8081}
 : ${LOCALHOST_URL="localhost"}
 : ${DATASET_DIR=""}
-: ${DOCKER_GPUS="0 "}
+: ${DOCKER_GPUS=""}
 
 DOCKER_INTERACTIVE=""
 DOCKER_EXTRA=""
@@ -115,7 +115,7 @@ fi
 
 # expose selected GPUs
 if [[ "$DOCKER_GPUS" != "" ]]; then
-  DOCKER_EXEC+="--gpus $DOCKER_GPUS"
+  DOCKER_EXEC+="--gpus $DOCKER_GPUS "
   gecho "Exposing GPU(s): $DOCKER_GPUS"
 else
   yecho "Not set: DOCKER_GPUS to expose"
