@@ -119,7 +119,7 @@ ___
 - Daniel Granhão: daniel.granhao@fe.up.pt
 - José Rosa: 2190383@my.ipleiria.pt
 - Guilherme Carvalho: guilherm3.c@gmail.com
-- Tiago Gonçalves: 
+- Tiago Gonçalves: tiago.f.goncalves@inesctec.pt
 
 ___
 
